@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="com.orderit.callerid.flutter_callerid">
+  <uses-permission android:name="android.hardware.usb.host" />
+  <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+</manifest>
