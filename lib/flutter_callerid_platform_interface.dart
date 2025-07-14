@@ -32,7 +32,7 @@ abstract class FlutterCalleridPlatform extends PlatformInterface {
   }
 
   Future<bool> isConnected(String vid, String pid) {
-    throw UnimplementedError('isConnected() has not been implemented.');
+    throw UnimplementedError('isConnected(vid: $vid, pid: $pid) has not been implemented.');
   }
 
   Future<void> getPrinters() {
