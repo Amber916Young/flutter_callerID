@@ -31,6 +31,10 @@ abstract class FlutterCalleridPlatform extends PlatformInterface {
     throw UnimplementedError('startUsbScan() has not been implemented.');
   }
 
+  Future<bool> isConnected(String vid, String pid) {
+    throw UnimplementedError('isConnected() has not been implemented.');
+  }
+
   Future<void> getPrinters() {
     throw UnimplementedError("getPrinters() has not been implemented.");
   }

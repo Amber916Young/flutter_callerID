@@ -52,7 +52,7 @@ class UsbDevicesService {
 
       List<UsbDeviceModel> usbPrinters = [];
       for (var map in devices) {
-        final printer = UsbDeviceModel(
+        final device = UsbDeviceModel(
           vendorId: map['vendorId'].toString(),
           productId: map['productId'].toString(),
           name: map['name'],
@@ -60,8 +60,8 @@ class UsbDevicesService {
           address: map['vendorId'].toString(),
           isConnected: map['connected'] ?? false,
         );
-        // printer.isConnected = await FlutterCalleridPlatform.instance.isConnected(printer);
-        usbPrinters.add(printer);
+        device.isConnected = await FlutterCalleridPlatform.instance.isConnected(device.vendorId!, device.productId!);
+        usbPrinters.add(device);
       }
 
       _devices.addAll(usbPrinters);
@@ -81,7 +81,7 @@ class UsbDevicesService {
           ),
         );
       });
-    
+
       _sortDevices();
     } catch (e) {
       log("$e [USB Connection]");
@@ -122,12 +122,12 @@ class UsbDevicesService {
   }
 
   Future<bool> startListening(UsbDeviceModel device) async {
-      _callerIdSubscription?.cancel();
-      _callerIdSubscription = _callerIdEventChannel.receiveBroadcastStream().listen((event) {
-        final map = Map<String, dynamic>.from(event);
-        log("Received Caller ID: ${map['caller']} at ${map['datetime']}");
-        _callerIdStream.add(map);
-      });
+    _callerIdSubscription?.cancel();
+    _callerIdSubscription = _callerIdEventChannel.receiveBroadcastStream().listen((event) {
+      final map = Map<String, dynamic>.from(event);
+      log("Received Caller ID: ${map['caller']} at ${map['datetime']}");
+      _callerIdStream.add(map);
+    });
 
     return FlutterCalleridPlatform.instance.startListening(device.vendorId!, device.productId!);
   }

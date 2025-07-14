@@ -33,6 +33,12 @@ class MockFlutterCalleridPlatform with MockPlatformInterfaceMixin implements Flu
   }
 
   @override
+  Future<bool> isConnected(String vid, String pid) {
+    // TODO: implement isConnected
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<UsbDeviceModel>> getPrinters() {
     // TODO: implement getAvailableDevices
     throw UnimplementedError();
