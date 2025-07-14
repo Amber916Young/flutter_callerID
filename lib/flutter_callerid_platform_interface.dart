@@ -26,4 +26,32 @@ abstract class FlutterCalleridPlatform extends PlatformInterface {
   Future<String?> getPlatformVersion() {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
+
+  Future<dynamic> startUsbScan() {
+    throw UnimplementedError('startUsbScan() has not been implemented.');
+  }
+
+  Future<void> getPrinters() {
+    throw UnimplementedError("getPrinters() has not been implemented.");
+  }
+
+  Future<bool> connectToHidDevice(String vid, String pid) {
+    throw UnimplementedError('connectToHidDevice() has not been implemented.');
+  }
+
+  Future<bool> disconnect(String vid, String pid) {
+    throw UnimplementedError('disconnect() has not been implemented.');
+  }
+
+  Future<bool> startListening(String vid, String pid) {
+    throw UnimplementedError('startListening() has not been implemented.');
+  }
+
+  Future<bool> stopListening() {
+    throw UnimplementedError('stopListening() has not been implemented.');
+  }
+
+  Stream<String> get callerIdEvents {
+    throw UnimplementedError('callerIdEvents has not been implemented.');
+  }
 }

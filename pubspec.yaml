@@ -1,7 +1,7 @@
 name: flutter_callerid
 description: "A new Flutter project."
 version: 0.0.1
-homepage:
+homepage: https://github.com/orderit/flutter_callerid
 
 environment:
   sdk: ^3.7.2
@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_blue_plus: ^1.35.5
   plugin_platform_interface: ^2.0.2
 
 dev_dependencies:
