@@ -20,6 +20,11 @@ class MethodChannelFlutterCallerid extends FlutterCalleridPlatform {
   }
 
   @override
+  Future<bool> isConnected(String vid, String pid) async {
+    return await methodChannel.invokeMethod('isConnected', {'vendorId': vid, 'productId': pid});
+  }
+
+  @override
   Future<dynamic> startUsbScan() async {
     return await methodChannel.invokeMethod('getAvailableDevices');
   }
