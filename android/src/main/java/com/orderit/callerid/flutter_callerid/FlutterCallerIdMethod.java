@@ -48,6 +48,7 @@ public class FlutterCallerIdMethod {
     private static final String ACTION_USB_DETACHED = "android.hardware.usb.action.USB_DEVICE_DETACHED";
     private static final String TAG = "FPP";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Thread readThread;
 
     private EventChannel.EventSink deviceEventSink;
     private EventChannel.EventSink callerIdEventSink;
@@ -121,6 +122,13 @@ public class FlutterCallerIdMethod {
                 } else if (Objects.equals(intent.getAction(), ACTION_USB_DETACHED)) {
                     UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     Log.d(TAG, "ACTION_USB_DETACHED");
+
+                    if (listeningDevice != null && device != null &&
+                            device.getVendorId() == listeningDevice.getVendorId() &&
+                            device.getProductId() == listeningDevice.getProductId()) {
+                        stopListening();
+                    }
+
                     sendDevice(device,true);
                 } else if (Objects.equals(intent.getAction(), ACTION_USB_PERMISSION)) {
                     Log.d(TAG, "ACTION_USB_PERMISSION " + (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)));
@@ -239,6 +247,7 @@ public class FlutterCallerIdMethod {
                 return "未知类(" + cls + ")";
         }
     }
+    UsbDevice listeningDevice = null;
 
     public void startListening(String vendorId, String productId) {
         Log.d(TAG, "Attempting to connect to device...");
@@ -260,6 +269,7 @@ public class FlutterCallerIdMethod {
             Log.e(TAG, "No permission for device. Please request it via broadcast.");
             return;
         }
+        listeningDevice = currentDevice;
         UsbInterface intf = currentDevice.getInterface(0);
         String deviceType = getDeviceType(intf);
         Log.d("USB", deviceType);
@@ -294,7 +304,8 @@ public class FlutterCallerIdMethod {
 
         Log.d(TAG, "Claimed interface and endpoints. Starting read loop...");
         sendData("AT+VCID=1\\r");
-        new Thread(this::readLoop).start();
+        readThread = new Thread(this::readLoop);
+        readThread .start();
         reading = true;
     }
 
@@ -539,13 +550,28 @@ public class FlutterCallerIdMethod {
 
     public void stopListening() {
         reading = false;
-        if (connection != null) {
-            connection.releaseInterface(mIntf);
-            connection.close();
+        if (readThread != null && readThread.isAlive()) {
+            try {
+                readThread.join(500);
+            } catch (InterruptedException e) {
+                Log.e(TAG, "Interrupted while stopping read thread", e);
+            }
+            readThread = null;
+        }
+        try {
+            if (connection != null) {
+                if (mIntf != null) {
+                    connection.releaseInterface(mIntf);
+                }
+                connection.close();
+            }
+        } finally {
             connection = null;
+            mIntf = null;
         }
         rEndpoint = null;
         wEndpoint = null;
+        listeningDevice = null;
         Log.d(TAG, "Stopped listening to Caller ID.");
     }
 
