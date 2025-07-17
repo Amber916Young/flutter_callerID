@@ -45,11 +45,11 @@ public class FlutterCalleridPlugin implements FlutterPlugin, MethodCallHandler {
     public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
         switch (call.method) {
             case "getAvailableDevices":
-                try {
+//                try {
                     result.success(flutterCallerIdMethod.getUsbDevicesList());
-                } catch (Exception e) {
-                    result.error("GET_USB_FAILED", e.getMessage(), null);
-                }
+//                } catch (Exception e) {
+//                    result.error("GET_USB_FAILED", e.getMessage(), null);
+//                }
                 break;
             case "connectToHidDevice": {
                 String vendorId = call.argument("vendorId");
