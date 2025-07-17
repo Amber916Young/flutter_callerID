@@ -60,6 +60,7 @@ class UsbDevicesService {
           address: map['vendorId'].toString(),
           isConnected: map['connected'] ?? false,
         );
+        print(device);
         device.isConnected = await FlutterCalleridPlatform.instance.isConnected(device.vendorId!, device.productId!);
         usbPrinters.add(device);
       }
