@@ -117,11 +117,11 @@ public class FlutterCallerIdMethod {
                 if (Objects.equals(intent.getAction(), ACTION_USB_ATTACHED)) {
                     UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     Log.d(TAG, "ACTION_USB_ATTACHED");
-                    sendDevice(device);
+                    sendDevice(device, false);
                 } else if (Objects.equals(intent.getAction(), ACTION_USB_DETACHED)) {
                     UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     Log.d(TAG, "ACTION_USB_DETACHED");
-                    sendDevice(device);
+                    sendDevice(device,true);
                 } else if (Objects.equals(intent.getAction(), ACTION_USB_PERMISSION)) {
                     Log.d(TAG, "ACTION_USB_PERMISSION " + (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)));
                     synchronized (this) {
@@ -129,7 +129,7 @@ public class FlutterCallerIdMethod {
                         boolean permissionGranted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
                         if (permissionGranted) {
                             Log.d(TAG, "Permission granted for device " + device);
-                            sendDevice(device);
+                            sendDevice(device,false);
                         } else {
                             Log.d(TAG, "Permission denied for device " + device);
                             connect(connectionVendorId, connectionProductId);
@@ -141,7 +141,7 @@ public class FlutterCallerIdMethod {
     }
 
 
-    private void sendDevice(UsbDevice device) {
+    private void sendDevice(UsbDevice device,boolean isRemove) {
         if (device == null) {
             Log.d(TAG, "Device is null.");
             return;
@@ -154,6 +154,7 @@ public class FlutterCallerIdMethod {
         deviceData.put("vendorId", String.valueOf(device.getVendorId()));
         deviceData.put("productId", String.valueOf(device.getProductId()));
         deviceData.put("connected", isConnected);
+        deviceData.put("isRemove", isRemove);
         Log.d(TAG, "Sending device data: " + deviceData);
         if (deviceEventSink != null) {
             mainHandler.post(() -> deviceEventSink.success(deviceData));
@@ -198,15 +199,12 @@ public class FlutterCallerIdMethod {
         }
 
         if (!m.hasPermission(device)) {
-//            requestingPermission++;
-//            PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
-//            m.requestPermission(device, permissionIntent);
             Log.d(TAG, "Requesting permission for device...");
             PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
             m.requestPermission(device, permissionIntent);
         } else {
             Log.d(TAG, "Permission already granted. Proceeding.");
-            sendDevice(device); // Proceed directly if permission exists
+            sendDevice(device,false); // Proceed directly if permission exists
         }
     }
 
@@ -223,7 +221,7 @@ public class FlutterCallerIdMethod {
         UsbDeviceConnection connection = ((UsbManager) context.getSystemService(USB_SERVICE)).openDevice(device);
         connection.releaseInterface(device.getInterface(0));
         connection.close();
-        sendDevice(device);
+        sendDevice(device,false);
         return true;
     }
 

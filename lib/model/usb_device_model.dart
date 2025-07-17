@@ -5,16 +5,26 @@ class UsbDeviceModel {
   String? name;
   ConnectionType? connectionType;
   bool? isConnected;
+  bool? isRemove;
   String? vendorId;
   String? productId;
 
-  UsbDeviceModel({this.address, this.name, this.connectionType, this.isConnected, this.vendorId, this.productId});
+  UsbDeviceModel({
+    this.address,
+    this.name,
+    this.connectionType,
+    this.isRemove,
+    this.isConnected,
+    this.vendorId,
+    this.productId,
+  });
 
   UsbDeviceModel.fromJson(Map<String, dynamic> json) {
     address = json['address'];
     name = json['connectionType'] == 'BLE' ? json['platformName'] : json['name'];
     connectionType = _getConnectionTypeFromString(json['connectionType']);
     isConnected = json['isConnected'];
+    isRemove = json['isRemove'];
     vendorId = json['vendorId'];
     productId = json['productId'];
   }
@@ -28,6 +38,7 @@ class UsbDeviceModel {
       data['name'] = name;
     }
     data['connectionType'] = connectionTypeString;
+    data['isRemove'] = isRemove;
     data['isConnected'] = isConnected;
     data['vendorId'] = vendorId;
     data['productId'] = productId;

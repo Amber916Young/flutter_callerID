@@ -59,8 +59,8 @@ class UsbDevicesService {
           connectionType: ConnectionType.USB,
           address: map['vendorId'].toString(),
           isConnected: map['connected'] ?? false,
+          isRemove: map['isRemove'] ?? false,
         );
-        print(device);
         device.isConnected = await FlutterCalleridPlatform.instance.isConnected(device.vendorId!, device.productId!);
         usbPrinters.add(device);
       }
@@ -79,6 +79,7 @@ class UsbDevicesService {
             connectionType: ConnectionType.USB,
             address: map['vendorId'].toString(),
             isConnected: map['connected'] ?? false,
+            isRemove: map['isRemove'] ?? false,
           ),
         );
       });
