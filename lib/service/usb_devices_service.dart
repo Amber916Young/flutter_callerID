@@ -61,7 +61,7 @@ class UsbDevicesService {
           isConnected: map['connected'] ?? false,
           isRemove: map['isRemove'] ?? false,
         );
-        device.isConnected = await FlutterCalleridPlatform.instance.isConnected(device.vendorId!, device.productId!);
+        // device.isConnected = await FlutterCalleridPlatform.instance.isConnected(device.vendorId!, device.productId!);
         usbPrinters.add(device);
       }
 
