@@ -122,9 +122,8 @@ public class FlutterCallerIdMethod {
                     UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     Log.d(TAG, "ACTION_USB_DETACHED");
                     sendDevice(device);
-                }
-                Log.d(TAG, "ACTION_USB_PERMISSION " + (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)));
-                if (Objects.equals(intent.getAction(), ACTION_USB_PERMISSION)) {
+                } else if (Objects.equals(intent.getAction(), ACTION_USB_PERMISSION)) {
+                    Log.d(TAG, "ACTION_USB_PERMISSION " + (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)));
                     synchronized (this) {
                         UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                         boolean permissionGranted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
@@ -198,16 +197,17 @@ public class FlutterCallerIdMethod {
             return;
         }
 
-        if (!m.hasPermission(device) && requestingPermission < 2) {
-            requestingPermission++;
+        if (!m.hasPermission(device)) {
+//            requestingPermission++;
+//            PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
+//            m.requestPermission(device, permissionIntent);
+            Log.d(TAG, "Requesting permission for device...");
             PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
             m.requestPermission(device, permissionIntent);
         } else {
-            requestingPermission = 0;
+            Log.d(TAG, "Permission already granted. Proceeding.");
             sendDevice(device); // Proceed directly if permission exists
         }
-
-
     }
 
     public boolean isConnected(String vendorId, String productId) {
@@ -217,7 +217,8 @@ public class FlutterCallerIdMethod {
 
     public boolean disconnect(String vendorId, String productId) {
         UsbDevice device = findDevice((UsbManager) context.getSystemService(USB_SERVICE), vendorId, productId);
-        if (device == null || !((UsbManager) context.getSystemService(USB_SERVICE)).hasPermission(device)) return false;
+        if (device == null || !((UsbManager) context.getSystemService(USB_SERVICE)).hasPermission(device))
+            return false;
 
         UsbDeviceConnection connection = ((UsbManager) context.getSystemService(USB_SERVICE)).openDevice(device);
         connection.releaseInterface(device.getInterface(0));
@@ -284,11 +285,7 @@ public class FlutterCallerIdMethod {
             UsbEndpoint ep = mIntf.getEndpoint(i);
             if (ep.getDirection() == UsbConstants.USB_DIR_IN) rEndpoint = ep;
             else if (ep.getDirection() == UsbConstants.USB_DIR_OUT) wEndpoint = ep;
-            Log.d(TAG, "Endpoint #" + i +
-                    " type=" + ep.getType() +
-                    ", direction=" + (ep.getDirection() == UsbConstants.USB_DIR_IN ? "IN" : "OUT") +
-                    ", address=" + ep.getAddress() +
-                    ", maxPacketSize=" + ep.getMaxPacketSize());
+            Log.d(TAG, "Endpoint #" + i + " type=" + ep.getType() + ", direction=" + (ep.getDirection() == UsbConstants.USB_DIR_IN ? "IN" : "OUT") + ", address=" + ep.getAddress() + ", maxPacketSize=" + ep.getMaxPacketSize());
         }
 
 
@@ -327,8 +324,8 @@ public class FlutterCallerIdMethod {
                     callInfo.put("callee", sCallee);
                     callInfo.put("datetime", sDateTime);
                     callInfo.put("port", String.valueOf(sPort));
-                    if (callerIdEventSink != null)     mainHandler.post(() -> callerIdEventSink.success(callInfo));
-
+                    if (callerIdEventSink != null)
+                        mainHandler.post(() -> callerIdEventSink.success(callInfo));
 
 
                 }
