@@ -202,7 +202,7 @@ public class FlutterCallerIdMethod {
         UsbDevice device = findDevice(m, vendorId, productId);
 
         if (device == null) {
-            Log.d(TAG, "Device not found.");
+            Log.d(TAG, "when connect but Device not found.");
             return;
         }
 
@@ -308,7 +308,19 @@ public class FlutterCallerIdMethod {
         readThread .start();
         reading = true;
     }
+    private void readLoop() {
+        byte[] buffer = new byte[64];
 
+        while (reading) {
+            int len = connection.bulkTransfer(rEndpoint, buffer, buffer.length, TIMEOUT);
+            if (len > 0) {
+                analyzePackage(buffer);
+            } else if (len == -1) {
+                Log.w(TAG, "No data or timeout.");
+            }
+            Sleep(SLEEP);
+        }
+    }
     private String sDateTime = "";
     private String sCaller = "";
     private String sCallee = "";
@@ -523,22 +535,7 @@ public class FlutterCallerIdMethod {
         return strPackage;
     }
 
-    private void readLoop() {
-        byte[] buffer = new byte[64];
 
-        while (reading) {
-            int len = connection.bulkTransfer(rEndpoint, buffer, buffer.length, TIMEOUT);
-            if (len > 0) {
-
-                analyzePackage(buffer);
-
-            } else if (len == -1) {
-                Log.w(TAG, "No data or timeout.");
-            }
-            Sleep(SLEEP);
-
-        }
-    }
 
     private void Sleep(int milliseconds) {
         try {
