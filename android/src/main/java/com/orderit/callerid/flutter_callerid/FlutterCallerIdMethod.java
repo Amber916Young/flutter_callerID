@@ -318,7 +318,7 @@ public class FlutterCallerIdMethod {
             if (len > 0) {
                 analyzePackage(buffer);
             } else if (len == -1) {
-                AppLogger.w(TAG, "No data or timeout.");
+//                AppLogger.w(TAG, "No data or timeout.");
             }
             Sleep(SLEEP);
         }

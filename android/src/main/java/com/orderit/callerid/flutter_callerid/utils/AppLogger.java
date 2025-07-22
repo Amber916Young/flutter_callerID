@@ -12,7 +12,8 @@ public class AppLogger {
     private static final int LOG_INTERVAL_MS = 1000;
 
     public static void d(String tag, String message) {
-        if (ENABLE_LOGGING) Log.d(tag, message);
+//        if (ENABLE_LOGGING)
+            Log.d(tag, message);
     }
 
     public static void i(String tag, String message) {
@@ -24,11 +25,13 @@ public class AppLogger {
     }
 
     public static void e(String tag, String message) {
-        if (ENABLE_LOGGING) Log.e(tag, message);
+//        if (ENABLE_LOGGING)
+            Log.e(tag, message);
     }
 
     public static void e(String tag, String message, Throwable t) {
-        if (ENABLE_LOGGING) Log.e(tag, message, t);
+//        if (ENABLE_LOGGING)
+            Log.e(tag, message, t);
     }
 
     public static void logThrottled(String tag, String message) {
