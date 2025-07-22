@@ -33,9 +33,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import com.hoho.android.usbserial.BuildConfig;
 import com.hoho.android.usbserial.driver.CdcAcmSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.orderit.callerid.flutter_callerid.utils.AppLogger;
 
 import io.flutter.plugin.common.EventChannel;
 
@@ -117,29 +119,27 @@ public class FlutterCallerIdMethod {
             public void onReceive(Context context, Intent intent) {
                 if (Objects.equals(intent.getAction(), ACTION_USB_ATTACHED)) {
                     UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                    Log.d(TAG, "ACTION_USB_ATTACHED");
+                    AppLogger.d(TAG, "ACTION_USB_ATTACHED");
                     sendDevice(device, false);
                 } else if (Objects.equals(intent.getAction(), ACTION_USB_DETACHED)) {
                     UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                    Log.d(TAG, "ACTION_USB_DETACHED");
+                    AppLogger.d(TAG, "ACTION_USB_DETACHED");
 
-                    if (listeningDevice != null && device != null &&
-                            device.getVendorId() == listeningDevice.getVendorId() &&
-                            device.getProductId() == listeningDevice.getProductId()) {
+                    if (listeningDevice != null && device != null && device.getVendorId() == listeningDevice.getVendorId() && device.getProductId() == listeningDevice.getProductId()) {
                         stopListening();
                     }
 
-                    sendDevice(device,true);
+                    sendDevice(device, true);
                 } else if (Objects.equals(intent.getAction(), ACTION_USB_PERMISSION)) {
-                    Log.d(TAG, "ACTION_USB_PERMISSION " + (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)));
+                    AppLogger.d(TAG, "ACTION_USB_PERMISSION " + (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)));
                     synchronized (this) {
                         UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                         boolean permissionGranted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
                         if (permissionGranted) {
-                            Log.d(TAG, "Permission granted for device " + device);
-                            sendDevice(device,false);
+                            AppLogger.d(TAG, "Permission granted for device " + device);
+                            sendDevice(device, false);
                         } else {
-                            Log.d(TAG, "Permission denied for device " + device);
+                            AppLogger.d(TAG, "Permission denied for device " + device);
                             connect(connectionVendorId, connectionProductId);
                         }
                     }
@@ -149,9 +149,9 @@ public class FlutterCallerIdMethod {
     }
 
 
-    private void sendDevice(UsbDevice device,boolean isRemove) {
+    private void sendDevice(UsbDevice device, boolean isRemove) {
         if (device == null) {
-            Log.d(TAG, "Device is null.");
+            AppLogger.d(TAG, "Device is null.");
             return;
         }
         boolean isConnected = isConnected(String.valueOf(device.getVendorId()), String.valueOf(device.getProductId()));
@@ -163,7 +163,7 @@ public class FlutterCallerIdMethod {
         deviceData.put("productId", String.valueOf(device.getProductId()));
         deviceData.put("connected", isConnected);
         deviceData.put("isRemove", isRemove);
-        Log.d(TAG, "Sending device data: " + deviceData);
+        AppLogger.d(TAG, "Sending device data: " + deviceData);
         if (deviceEventSink != null) {
             mainHandler.post(() -> deviceEventSink.success(deviceData));
         }
@@ -202,17 +202,17 @@ public class FlutterCallerIdMethod {
         UsbDevice device = findDevice(m, vendorId, productId);
 
         if (device == null) {
-            Log.d(TAG, "when connect but Device not found.");
+            AppLogger.d(TAG, "when connect but Device not found.");
             return;
         }
 
         if (!m.hasPermission(device)) {
-            Log.d(TAG, "Requesting permission for device...");
+            AppLogger.d(TAG, "Requesting permission for device...");
             PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
             m.requestPermission(device, permissionIntent);
         } else {
-            Log.d(TAG, "Permission already granted. Proceeding.");
-            sendDevice(device,false); // Proceed directly if permission exists
+            AppLogger.d(TAG, "Permission already granted. Proceeding.");
+            sendDevice(device, false); // Proceed directly if permission exists
         }
     }
 
@@ -229,7 +229,7 @@ public class FlutterCallerIdMethod {
         UsbDeviceConnection connection = ((UsbManager) context.getSystemService(USB_SERVICE)).openDevice(device);
         connection.releaseInterface(device.getInterface(0));
         connection.close();
-        sendDevice(device,false);
+        sendDevice(device, false);
         return true;
     }
 
@@ -247,10 +247,11 @@ public class FlutterCallerIdMethod {
                 return "未知类(" + cls + ")";
         }
     }
+
     UsbDevice listeningDevice = null;
 
     public void startListening(String vendorId, String productId) {
-        Log.d(TAG, "Attempting to connect to device...");
+        AppLogger.d(TAG, "Attempting to connect to device...");
 
         UsbManager m = (UsbManager) context.getSystemService(Context.USB_SERVICE);
         UsbDevice currentDevice = null;
@@ -262,52 +263,53 @@ public class FlutterCallerIdMethod {
         }
 
         if (currentDevice == null) {
-            Log.e(TAG, "No connected device.");
+            AppLogger.e(TAG, "No connected device.");
             return;
         }
         if (!m.hasPermission(currentDevice)) {
-            Log.e(TAG, "No permission for device. Please request it via broadcast.");
+            AppLogger.e(TAG, "No permission for device. Please request it via broadcast.");
             return;
         }
         listeningDevice = currentDevice;
         UsbInterface intf = currentDevice.getInterface(0);
         String deviceType = getDeviceType(intf);
-        Log.d("USB", deviceType);
+        AppLogger.d("USB", deviceType);
 
         connection = m.openDevice(currentDevice);
         if (connection == null) {
-            Log.e(TAG, "Failed to open or claim interface.");
+            AppLogger.e(TAG, "Failed to open or claim interface.");
             return;
         }
 
         mIntf = currentDevice.getInterface(0);
         if (!connection.claimInterface(mIntf, true)) {
-            Log.e(TAG, "Failed to claim interface.");
+            AppLogger.e(TAG, "Failed to claim interface.");
             return;
         }
 
-        Log.d(TAG, "  Interface Class: " + mIntf.getInterfaceClass());
+        AppLogger.d(TAG, "  Interface Class: " + mIntf.getInterfaceClass());
 
         // Dynamically pick endpoints by direction
         for (int i = 0; i < mIntf.getEndpointCount(); i++) {
             UsbEndpoint ep = mIntf.getEndpoint(i);
             if (ep.getDirection() == UsbConstants.USB_DIR_IN) rEndpoint = ep;
             else if (ep.getDirection() == UsbConstants.USB_DIR_OUT) wEndpoint = ep;
-            Log.d(TAG, "Endpoint #" + i + " type=" + ep.getType() + ", direction=" + (ep.getDirection() == UsbConstants.USB_DIR_IN ? "IN" : "OUT") + ", address=" + ep.getAddress() + ", maxPacketSize=" + ep.getMaxPacketSize());
+            AppLogger.d(TAG, "Endpoint #" + i + " type=" + ep.getType() + ", direction=" + (ep.getDirection() == UsbConstants.USB_DIR_IN ? "IN" : "OUT") + ", address=" + ep.getAddress() + ", maxPacketSize=" + ep.getMaxPacketSize());
         }
 
 
         if (rEndpoint == null) {
-            Log.e(TAG, "No readable endpoint found.");
+            AppLogger.e(TAG, "No readable endpoint found.");
             return;
         }
 
-        Log.d(TAG, "Claimed interface and endpoints. Starting read loop...");
+        AppLogger.d(TAG, "Claimed interface and endpoints. Starting read loop...");
         sendData("AT+VCID=1\\r");
         readThread = new Thread(this::readLoop);
-        readThread .start();
+        readThread.start();
         reading = true;
     }
+
     private void readLoop() {
         byte[] buffer = new byte[64];
 
@@ -316,11 +318,12 @@ public class FlutterCallerIdMethod {
             if (len > 0) {
                 analyzePackage(buffer);
             } else if (len == -1) {
-                Log.w(TAG, "No data or timeout.");
+                AppLogger.w(TAG, "No data or timeout.");
             }
             Sleep(SLEEP);
         }
     }
+
     private String sDateTime = "";
     private String sCaller = "";
     private String sCallee = "";
@@ -330,7 +333,6 @@ public class FlutterCallerIdMethod {
     private void analyzePackage(byte[] bytes) {
         try {
             final String strPackage = composeString(bytes);
-            Log.d("====", strPackage);
 
             if (strPackage.contains("ENQ")) sendData(ACK);
             else if (strPackage.contains("ETB")) sendData(ACK);
@@ -339,7 +341,7 @@ public class FlutterCallerIdMethod {
                 sendData(DCK);
                 if (testCliPackage(bytes)) {
                     //TODO pass data to flutter
-                    Log.d("analyzePackage", sDateTime + "<-- " + sCaller + "-----" + sCallee + "-----" + sPort + "-----" + sOther);
+                    AppLogger.d("analyzePackage", sDateTime + "<-- " + sCaller + "-----" + sCallee + "-----" + sPort + "-----" + sOther);
                     Map<String, Object> callInfo = new HashMap<>();
                     callInfo.put("caller", sCaller);
                     callInfo.put("callee", sCallee);
@@ -352,7 +354,7 @@ public class FlutterCallerIdMethod {
                 }
             }
         } catch (Exception e) {
-            Log.d("analyzePackage", Log.getStackTraceString(e));
+            AppLogger.d("analyzePackage", Log.getStackTraceString(e));
         }
     }
 
@@ -375,7 +377,7 @@ public class FlutterCallerIdMethod {
                 }
             }
         } catch (Exception e) {
-            Log.d("testCliPackage", Log.getStackTraceString(e));
+            AppLogger.d("testCliPackage", Log.getStackTraceString(e));
         }
         return res;
     }
@@ -403,7 +405,7 @@ public class FlutterCallerIdMethod {
                 }
             }
         } catch (Exception e) {
-            Log.d("CEBridge - parsesDMF", Log.getStackTraceString(e));
+            AppLogger.d("CEBridge - parsesDMF", Log.getStackTraceString(e));
         }
 
         return (!enableCheckDigitControl || testCheckDigit(Package));
@@ -490,7 +492,7 @@ public class FlutterCallerIdMethod {
                 }
             }
         } catch (Exception e) {
-            Log.d("CEBridge - parseMDMF", Log.getStackTraceString(e));
+            AppLogger.d("CEBridge - parseMDMF", Log.getStackTraceString(e));
         }
 
         return (!enableCheckDigitControl || testCheckDigit(Package));
@@ -510,7 +512,7 @@ public class FlutterCallerIdMethod {
                 pDigit = (pDigit + Math.abs((int) inputReport[i] & 255)) & 255;
             pDigit = Math.abs((int) (0x100 - pDigit)) & 255;
         } catch (Exception e) {
-            Log.d("testCheckDigit", Log.getStackTraceString(e));
+            AppLogger.d("testCheckDigit", Log.getStackTraceString(e));
         }
 
         return pDigit == cDigit;
@@ -529,12 +531,11 @@ public class FlutterCallerIdMethod {
             }
             strPackage = builder.toString();
         } catch (Exception e) {
-            Log.d("composeString", Log.getStackTraceString(e));
+            AppLogger.d("composeString", Log.getStackTraceString(e));
         }
 
         return strPackage;
     }
-
 
 
     private void Sleep(int milliseconds) {
@@ -551,7 +552,7 @@ public class FlutterCallerIdMethod {
             try {
                 readThread.join(500);
             } catch (InterruptedException e) {
-                Log.e(TAG, "Interrupted while stopping read thread", e);
+                AppLogger.e(TAG, "Interrupted while stopping read thread", e);
             }
             readThread = null;
         }
@@ -569,7 +570,7 @@ public class FlutterCallerIdMethod {
         rEndpoint = null;
         wEndpoint = null;
         listeningDevice = null;
-        Log.d(TAG, "Stopped listening to Caller ID.");
+        AppLogger.d(TAG, "Stopped listening to Caller ID.");
     }
 
     private UsbDevice findDevice(UsbManager manager, String vendorId, String productId) {
@@ -585,10 +586,10 @@ public class FlutterCallerIdMethod {
             if (connection != null && wEndpoint != null) {
                 byte[] data = message.getBytes(StandardCharsets.UTF_8);
                 int result = connection.bulkTransfer(wEndpoint, data, data.length, TIMEOUT);
-                Log.d(TAG, "sendData " + (result >= 0 ? "success" : "fail") + ": " + message);
+                AppLogger.d(TAG, "sendData " + (result >= 0 ? "success" : "fail") + ": " + message);
             }
         } catch (Exception e) {
-            Log.e(TAG, "sendData failed", e);
+            AppLogger.e(TAG, "sendData failed", e);
         }
     }
 

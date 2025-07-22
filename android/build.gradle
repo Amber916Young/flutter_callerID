@@ -26,7 +26,9 @@ android {
     namespace = "com.orderit.callerid.flutter_callerid"
 
     compileSdk = 35
-
+    buildFeatures {
+        buildConfig = true
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -35,7 +37,14 @@ android {
     defaultConfig {
         minSdk = 21
     }
-
+    buildTypes {
+        debug {
+            buildConfigField("boolean", "IS_LOGGING_ENABLED", "true")
+        }
+        release {
+            buildConfigField("boolean", "IS_LOGGING_ENABLED", "false")
+        }
+    }
     dependencies {
         implementation 'com.github.mik3y:usb-serial-for-android:3.9.0'
         testImplementation("junit:junit:4.13.2")
