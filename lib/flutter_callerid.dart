@@ -13,8 +13,11 @@ class FlutterCallerid {
   }
 
   /// Get all available USB  devices
-  Future<void> getUSBDevices() async {
-    DevicesService().getUSBDevices();
+  Future<void> getDevices({
+    List<ConnectionType> connectionTypes = const [ConnectionType.USB, ConnectionType.BLE],
+    bool androidUsesFineLocation = false,
+  }) async {
+    DevicesService().getDevices(connectionTypes: connectionTypes, androidUsesFineLocation: androidUsesFineLocation);
   }
 
   Future<void> stopScan() async {
