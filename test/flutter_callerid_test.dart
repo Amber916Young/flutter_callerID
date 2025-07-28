@@ -13,7 +13,6 @@ class MockFlutterCalleridPlatform with MockPlatformInterfaceMixin implements Flu
   // TODO: implement callerIdEvents
   Stream<String> get callerIdEvents => throw UnimplementedError();
 
- 
   @override
   Future<bool> connectToHidDevice(String vid, String pid) {
     // TODO: implement connectToHidDevice
@@ -39,13 +38,12 @@ class MockFlutterCalleridPlatform with MockPlatformInterfaceMixin implements Flu
   }
 
   @override
-  Future<List<UsbDeviceModel>> getPrinters() {
+  Future<List<DeviceModel>> getPrinters() {
     // TODO: implement getAvailableDevices
     throw UnimplementedError();
   }
 
-
-  @override   
+  @override
   Future<bool> startListening(String vid, String pid) {
     // TODO: implement startListening
     throw UnimplementedError();

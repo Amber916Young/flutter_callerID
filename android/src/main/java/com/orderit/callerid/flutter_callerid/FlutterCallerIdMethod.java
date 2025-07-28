@@ -318,7 +318,7 @@ public class FlutterCallerIdMethod {
             if (len > 0) {
                 analyzePackage(buffer);
             } else if (len == -1) {
-//                AppLogger.w(TAG, "No data or timeout.");
+                AppLogger.w(TAG, "No data or timeout.");
             }
             Sleep(SLEEP);
         }
@@ -333,9 +333,11 @@ public class FlutterCallerIdMethod {
     private void analyzePackage(byte[] bytes) {
         try {
             final String strPackage = composeString(bytes);
+            AppLogger.d("analyzePackage", strPackage);
 
-            if (strPackage.contains("ENQ")) sendData(ACK);
-            else if (strPackage.contains("ETB")) sendData(ACK);
+            if (strPackage.contains("ENQ") ||strPackage.contains("ETB")){
+                sendData(ACK);
+            }
 //            else if (strPackage.contains("STA")) echoLineEvent(strPackage);
             else {
                 sendData(DCK);

@@ -45,15 +45,15 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  StreamSubscription<List<UsbDeviceModel>>? _devicesStreamSubscription;
+  StreamSubscription<List<DeviceModel>>? _devicesStreamSubscription;
   StreamSubscription<Map<String, dynamic>>? _callerIdStreamSubscription;
-  List<UsbDeviceModel> _devices = [];
-  UsbDeviceModel? _connectedDevice;
+  List<DeviceModel> _devices = [];
+  DeviceModel? _connectedDevice;
   // Get Printer List
   void startScan() async {
     _devicesStreamSubscription?.cancel();
     await _flutterCalleridPlugin.getUSBDevices();
-    _devicesStreamSubscription = _flutterCalleridPlugin.devicesStream.listen((List<UsbDeviceModel> event) {
+    _devicesStreamSubscription = _flutterCalleridPlugin.devicesStream.listen((List<DeviceModel> event) {
       log(event.map((e) => e.name).toList().toString());
       setState(() {
         _devices = event;
@@ -62,7 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void startListening(UsbDeviceModel? device) async {
+  void startListening(DeviceModel? device) async {
     if (device == null) {
       return;
     }
@@ -81,12 +81,12 @@ class _MyHomePageState extends State<MyHomePage> {
     await _flutterCalleridPlugin.stopListening();
   }
 
-  void connectToHidDevice(UsbDeviceModel device) async {
+  void connectToHidDevice(DeviceModel device) async {
     _connectedDevice = device;
     await _flutterCalleridPlugin.connectToHidDevice(device);
   }
 
-  void disconnect(UsbDeviceModel device) async {
+  void disconnect(DeviceModel device) async {
     await _flutterCalleridPlugin.disconnect(device);
   }
 

@@ -6,17 +6,17 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_callerid/flutter_callerid_platform_interface.dart';
 import 'package:flutter_callerid/model/usb_device_model.dart';
 
-class UsbDevicesService {
-  static final UsbDevicesService _instance = UsbDevicesService._internal();
+class DevicesService {
+  static final DevicesService _instance = DevicesService._internal();
 
-  factory UsbDevicesService() => _instance;
+  factory DevicesService() => _instance;
 
-  UsbDevicesService._internal();
+  DevicesService._internal();
 
-  final StreamController<List<UsbDeviceModel>> _devicesstream = StreamController<List<UsbDeviceModel>>.broadcast();
+  final StreamController<List<DeviceModel>> _devicesstream = StreamController<List<DeviceModel>>.broadcast();
   final StreamController<Map<String, dynamic>> _callerIdStream = StreamController<Map<String, dynamic>>.broadcast();
 
-  Stream<List<UsbDeviceModel>> get devicesStream => _devicesstream.stream;
+  Stream<List<DeviceModel>> get devicesStream => _devicesstream.stream;
   Stream<Map<String, dynamic>> get callerIdStream => _callerIdStream.stream;
 
   StreamSubscription? subscription;
@@ -30,7 +30,7 @@ class UsbDevicesService {
   final EventChannel _deviceEventChannel = EventChannel(_deviceChannelName);
   final EventChannel _callerIdEventChannel = EventChannel(_callerIdChannelName);
 
-  final List<UsbDeviceModel> _devices = [];
+  final List<DeviceModel> _devices = [];
 
   Future<void> stopScan({bool stopBle = true, bool stopUsb = true}) async {
     try {
@@ -50,9 +50,9 @@ class UsbDevicesService {
     try {
       final devices = await FlutterCalleridPlatform.instance.startUsbScan();
       _devices.clear();
-      List<UsbDeviceModel> usbPrinters = [];
+      List<DeviceModel> usbPrinters = [];
       for (var map in devices) {
-        final device = UsbDeviceModel(
+        final device = DeviceModel(
           vendorId: map['vendorId'].toString(),
           productId: map['productId'].toString(),
           name: map['name'],
@@ -72,7 +72,7 @@ class UsbDevicesService {
       _usbSubscription = _deviceEventChannel.receiveBroadcastStream().listen((event) {
         final map = Map<String, dynamic>.from(event);
         _updateOrAddPrinter(
-          UsbDeviceModel(
+          DeviceModel(
             vendorId: map['vendorId'].toString(),
             productId: map['productId'].toString(),
             name: map['name'],
@@ -90,7 +90,7 @@ class UsbDevicesService {
     }
   }
 
-  Future<bool> connect(UsbDeviceModel device) async {
+  Future<bool> connect(DeviceModel device) async {
     if (device.connectionType == ConnectionType.USB) {
       return await FlutterCalleridPlatform.instance.connectToHidDevice(device.vendorId!, device.productId!);
     } else {
@@ -112,7 +112,20 @@ class UsbDevicesService {
     }
   }
 
-  Future<void> disconnect(UsbDeviceModel device) async {
+  Future<bool> isConnected(DeviceModel device) async {
+    if (device.connectionType == ConnectionType.USB) {
+      return await FlutterCalleridPlatform.instance.isConnected(device.vendorId!, device.productId!);
+    } else {
+      try {
+        final bt = BluetoothDevice.fromId(device.address!);
+        return bt.isConnected;
+      } catch (e) {
+        return false;
+      }
+    }
+  }
+
+  Future<void> disconnect(DeviceModel device) async {
     if (device.connectionType == ConnectionType.BLE) {
       try {
         final bt = BluetoothDevice.fromId(device.address!);
@@ -123,7 +136,7 @@ class UsbDevicesService {
     }
   }
 
-  Future<bool> startListening(UsbDeviceModel device) async {
+  Future<bool> startListening(DeviceModel device) async {
     _callerIdSubscription?.cancel();
     _callerIdSubscription = _callerIdEventChannel.receiveBroadcastStream().listen((event) {
       final map = Map<String, dynamic>.from(event);
@@ -140,7 +153,7 @@ class UsbDevicesService {
     return FlutterCalleridPlatform.instance.stopListening();
   }
 
-  void _updateOrAddPrinter(UsbDeviceModel printer) {
+  void _updateOrAddPrinter(DeviceModel printer) {
     final index = _devices.indexWhere((device) => device.address == printer.address);
     if (index == -1) {
       _devices.add(printer);

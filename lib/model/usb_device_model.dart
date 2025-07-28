@@ -1,6 +1,6 @@
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-class UsbDeviceModel {
+class DeviceModel {
   String? address;
   String? name;
   ConnectionType? connectionType;
@@ -9,7 +9,7 @@ class UsbDeviceModel {
   String? vendorId;
   String? productId;
 
-  UsbDeviceModel({
+  DeviceModel({
     this.address,
     this.name,
     this.connectionType,
@@ -19,7 +19,7 @@ class UsbDeviceModel {
     this.productId,
   });
 
-  UsbDeviceModel.fromJson(Map<String, dynamic> json) {
+  DeviceModel.fromJson(Map<String, dynamic> json) {
     address = json['address'];
     name = json['connectionType'] == 'BLE' ? json['platformName'] : json['name'];
     connectionType = _getConnectionTypeFromString(json['connectionType']);
@@ -61,7 +61,7 @@ class UsbDeviceModel {
 
 enum ConnectionType { BLE, USB, NETWORK }
 
-extension PrinterExtension on UsbDeviceModel {
+extension PrinterExtension on DeviceModel {
   String get connectionTypeString {
     switch (connectionType) {
       case ConnectionType.BLE:
