@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_callerid/flutter_callerid_platform_interface.dart';
 import 'package:flutter_callerid/model/usb_device_model.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 
 class DevicesService {
   static final DevicesService _instance = DevicesService._internal();
@@ -33,6 +34,8 @@ class DevicesService {
   final EventChannel _callerIdEventChannel = EventChannel(_callerIdChannelName);
 
   final List<DeviceModel> _devices = [];
+  Socket? _socket;
+  int _port = 9100;
 
   Future<void> stopScan({bool stopBle = true, bool stopUsb = true}) async {
     try {
@@ -49,7 +52,7 @@ class DevicesService {
     }
   }
 
-  // Get Printers from BT and USB
+  // Get Devices from BT and USB
   Future<void> getDevices({
     List<ConnectionType> connectionTypes = const [
       ConnectionType.BLE,
@@ -73,6 +76,36 @@ class DevicesService {
         await stopScan(stopBle: true);
         await _getBleDevices(androidUsesFineLocation);
       }
+    }
+    if (connectionTypes.contains(ConnectionType.NETWORK)) {
+      await _getNetworkDevices();
+    }
+  }
+
+  Future<void> _getNetworkDevices() async {
+    String? ip = await _getLocalIP();
+    if (ip != null) {
+      // subnet
+      final subnet = ip.substring(0, ip.lastIndexOf('.'));
+      for (int i = 1; i <= 255; i++) {
+        final deviceIp = '$subnet.$i';
+        // check if device is reachable by ping
+        if (await _pingAndAddDevice(deviceIp)) {
+          _devices.add(
+            DeviceModel(
+              address: deviceIp,
+              name: 'Network Device $i',
+              connectionType: ConnectionType.NETWORK,
+              isConnected: false,
+            ),
+          );
+        }
+      }
+      // remove duplicates by address
+      _devices.removeWhere(
+        (device) => device.address == null || device.address == '',
+      );
+      _sortDevices();
     }
   }
 
@@ -180,7 +213,7 @@ class DevicesService {
         device.vendorId!,
         device.productId!,
       );
-    } else {
+    } else if (device.connectionType == ConnectionType.BLE) {
       try {
         bool isConnected = false;
         final bt = BluetoothDevice.fromId(device.address!);
@@ -196,7 +229,10 @@ class DevicesService {
       } catch (e) {
         return false;
       }
+    } else if (device.connectionType == ConnectionType.NETWORK) {
+    
     }
+    return false;
   }
 
   Future<bool> isConnected(DeviceModel device) async {
@@ -302,5 +338,26 @@ class DevicesService {
       }
     });
     _devicesstream.add(_devices);
+  }
+
+  Future<String?> _getLocalIP() async {
+    final info = NetworkInfo();
+    final wifiIP =
+        await info.getWifiIP(); // This gives your IP on the local network
+    return wifiIP;
+  }
+
+  Future<bool> _pingAndAddDevice(String ip) async {
+    try {
+      final socket = await Socket.connect(
+        ip,
+        80,
+        timeout: const Duration(milliseconds: 300),
+      );
+      socket.destroy();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }
