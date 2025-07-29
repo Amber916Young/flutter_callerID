@@ -54,6 +54,7 @@ class DevicesService {
   Future<void> getDevices({
     List<ConnectionType> connectionTypes = const [ConnectionType.BLE, ConnectionType.USB],
     bool androidUsesFineLocation = false,
+    int cloudPrinterNum = 1,
   }) async {
     if (connectionTypes.isEmpty) {
       throw Exception('No connection type provided');
@@ -73,15 +74,16 @@ class DevicesService {
       }
     }
     if (connectionTypes.contains(ConnectionType.NETWORK)) {
-      await _getNetworkDevices();
+      await _getNetworkDevices(cloudPrinterNum);
     }
   }
 
-  Future<void> _getNetworkDevices() async {
+  Future<void> _getNetworkDevices(int cloudPrinterNum) async {
     String? ip = await _getLocalIP();
     if (ip != null) {
       // subnet
       final subnet = ip.substring(0, ip.lastIndexOf('.'));
+      int count = 0;
       for (int i = 1; i <= 255; i++) {
         final deviceIp = '$subnet.$i';
         // check if device is reachable by ping
@@ -95,6 +97,9 @@ class DevicesService {
               isConnected: false,
             ),
           );
+          if (count++ == cloudPrinterNum) {
+            break;
+          }
         }
       }
       // remove duplicates by address
