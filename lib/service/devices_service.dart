@@ -15,10 +15,8 @@ class DevicesService {
 
   DevicesService._internal();
 
-  final StreamController<List<DeviceModel>> _devicesstream =
-      StreamController<List<DeviceModel>>.broadcast();
-  final StreamController<Map<String, dynamic>> _callerIdStream =
-      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<List<DeviceModel>> _devicesstream = StreamController<List<DeviceModel>>.broadcast();
+  final StreamController<Map<String, dynamic>> _callerIdStream = StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<List<DeviceModel>> get devicesStream => _devicesstream.stream;
   Stream<Map<String, dynamic>> get callerIdStream => _callerIdStream.stream;
@@ -54,10 +52,7 @@ class DevicesService {
 
   // Get Devices from BT and USB
   Future<void> getDevices({
-    List<ConnectionType> connectionTypes = const [
-      ConnectionType.BLE,
-      ConnectionType.USB,
-    ],
+    List<ConnectionType> connectionTypes = const [ConnectionType.BLE, ConnectionType.USB],
     bool androidUsesFineLocation = false,
   }) async {
     if (connectionTypes.isEmpty) {
@@ -91,10 +86,11 @@ class DevicesService {
         final deviceIp = '$subnet.$i';
         // check if device is reachable by ping
         if (await _pingAndAddDevice(deviceIp)) {
+          debugPrint('valid device found $deviceIp');
           _devices.add(
             DeviceModel(
               address: deviceIp,
-              name: 'Network Device $i',
+              name: 'Cloud Printer $i',
               connectionType: ConnectionType.NETWORK,
               isConnected: false,
             ),
@@ -102,9 +98,7 @@ class DevicesService {
         }
       }
       // remove duplicates by address
-      _devices.removeWhere(
-        (device) => device.address == null || device.address == '',
-      );
+      _devices.removeWhere((device) => device.address == null || device.address == '');
       _sortDevices();
     }
   }
@@ -143,9 +137,7 @@ class DevicesService {
                     isConnected: e.device.isConnected,
                   );
                 })
-                .where(
-                  (device) => device.name != null && device.name!.isNotEmpty,
-                )
+                .where((device) => device.name != null && device.name!.isNotEmpty)
                 .toList();
 
         for (var device in devices) {
@@ -184,9 +176,7 @@ class DevicesService {
       _devices.addAll(usbPrinters);
 
       // Start listening to USB events
-      _usbSubscription = _deviceEventChannel.receiveBroadcastStream().listen((
-        event,
-      ) {
+      _usbSubscription = _deviceEventChannel.receiveBroadcastStream().listen((event) {
         final map = Map<String, dynamic>.from(event);
         _updateOrAddPrinter(
           DeviceModel(
@@ -209,10 +199,7 @@ class DevicesService {
 
   Future<bool> connect(DeviceModel device) async {
     if (device.connectionType == ConnectionType.USB) {
-      return await FlutterCalleridPlatform.instance.connectToHidDevice(
-        device.vendorId!,
-        device.productId!,
-      );
+      return await FlutterCalleridPlatform.instance.connectToHidDevice(device.vendorId!, device.productId!);
     } else if (device.connectionType == ConnectionType.BLE) {
       try {
         bool isConnected = false;
@@ -229,18 +216,13 @@ class DevicesService {
       } catch (e) {
         return false;
       }
-    } else if (device.connectionType == ConnectionType.NETWORK) {
-    
-    }
+    } else if (device.connectionType == ConnectionType.NETWORK) {}
     return false;
   }
 
   Future<bool> isConnected(DeviceModel device) async {
     if (device.connectionType == ConnectionType.USB) {
-      return await FlutterCalleridPlatform.instance.isConnected(
-        device.vendorId!,
-        device.productId!,
-      );
+      return await FlutterCalleridPlatform.instance.isConnected(device.vendorId!, device.productId!);
     } else {
       try {
         final bt = BluetoothDevice.fromId(device.address!);
@@ -264,18 +246,13 @@ class DevicesService {
 
   Future<bool> startListening(DeviceModel device) async {
     _callerIdSubscription?.cancel();
-    _callerIdSubscription = _callerIdEventChannel
-        .receiveBroadcastStream()
-        .listen((event) {
-          final map = Map<String, dynamic>.from(event);
-          log("Received Caller ID: ${map['caller']} at ${map['datetime']}");
-          _callerIdStream.add(map);
-        });
+    _callerIdSubscription = _callerIdEventChannel.receiveBroadcastStream().listen((event) {
+      final map = Map<String, dynamic>.from(event);
+      log("Received Caller ID: ${map['caller']} at ${map['datetime']}");
+      _callerIdStream.add(map);
+    });
 
-    return FlutterCalleridPlatform.instance.startListening(
-      device.vendorId!,
-      device.productId!,
-    );
+    return FlutterCalleridPlatform.instance.startListening(device.vendorId!, device.productId!);
   }
 
   Future<bool> stopListening() async {
@@ -311,9 +288,7 @@ class DevicesService {
   }
 
   void _updateOrAddPrinter(DeviceModel printer) {
-    final index = _devices.indexWhere(
-      (device) => device.address == printer.address,
-    );
+    final index = _devices.indexWhere((device) => device.address == printer.address);
     if (index == -1) {
       _devices.add(printer);
     } else {
@@ -323,9 +298,7 @@ class DevicesService {
   }
 
   void _sortDevices() {
-    _devices.removeWhere(
-      (element) => element.name == null || element.name == '',
-    );
+    _devices.removeWhere((element) => element.name == null || element.name == '');
     // remove items having same vendorId
     Set<String> seen = {};
     _devices.retainWhere((element) {
@@ -342,21 +315,17 @@ class DevicesService {
 
   Future<String?> _getLocalIP() async {
     final info = NetworkInfo();
-    final wifiIP =
-        await info.getWifiIP(); // This gives your IP on the local network
+    final wifiIP = await info.getWifiIP(); // This gives your IP on the local network
     return wifiIP;
   }
 
   Future<bool> _pingAndAddDevice(String ip) async {
     try {
-      final socket = await Socket.connect(
-        ip,
-        80,
-        timeout: const Duration(milliseconds: 300),
-      );
+      final socket = await Socket.connect(ip, _port, timeout: const Duration(seconds: 5));
       socket.destroy();
       return true;
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Failed to ping $ip ${error.toString()}');
       return false;
     }
   }
