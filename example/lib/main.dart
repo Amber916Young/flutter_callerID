@@ -52,7 +52,10 @@ class _MyHomePageState extends State<MyHomePage> {
   // Get Printer List
   void startScan() async {
     _devicesStreamSubscription?.cancel();
-    await _flutterCalleridPlugin.getDevices(connectionTypes: [ConnectionType.BLE], androidUsesFineLocation: true);
+    await _flutterCalleridPlugin.getDevices(
+      connectionTypes: [ConnectionType.USB, ConnectionType.BLE],
+      androidUsesFineLocation: false,
+    );
     _devicesStreamSubscription = _flutterCalleridPlugin.devicesStream.listen((List<DeviceModel> event) {
       log(event.map((e) => e.name).toList().toString());
       setState(() {
@@ -107,16 +110,19 @@ class _MyHomePageState extends State<MyHomePage> {
             Text('Last Phone Number: $_lastPhoneNumber'),
             const SizedBox(height: 16),
             const Text('Available Devices:'),
-            ListView.builder(
-              itemCount: _devices.length,
-              shrinkWrap: true,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(_devices[index].name ?? ''),
-                  subtitle: Text(_devices[index].isConnected ?? false ? 'Connected' : 'Disconnected'),
-                  onTap: () => connectToHidDevice(_devices[index]),
-                );
-              },
+            SizedBox(
+              height: 200,
+              child: ListView.builder(
+                itemCount: _devices.length,
+                shrinkWrap: true,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(_devices[index].name ?? ''),
+                    subtitle: Text(_devices[index].isConnected ?? false ? 'Connected' : 'Disconnected'),
+                    onTap: () => connectToHidDevice(_devices[index]),
+                  );
+                },
+              ),
             ),
 
             const SizedBox(height: 16),
