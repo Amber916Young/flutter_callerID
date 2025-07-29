@@ -97,7 +97,8 @@ class DevicesService {
               isConnected: false,
             ),
           );
-          if (count++ == cloudPrinterNum) {
+          count++;
+          if (count == cloudPrinterNum) {
             break;
           }
         }
