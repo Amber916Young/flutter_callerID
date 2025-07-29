@@ -15,8 +15,10 @@ class DevicesService {
 
   DevicesService._internal();
 
-  final StreamController<List<DeviceModel>> _devicesstream = StreamController<List<DeviceModel>>.broadcast();
-  final StreamController<Map<String, dynamic>> _callerIdStream = StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<List<DeviceModel>> _devicesstream =
+      StreamController<List<DeviceModel>>.broadcast();
+  final StreamController<Map<String, dynamic>> _callerIdStream =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<List<DeviceModel>> get devicesStream => _devicesstream.stream;
   Stream<Map<String, dynamic>> get callerIdStream => _callerIdStream.stream;
@@ -32,7 +34,6 @@ class DevicesService {
   final EventChannel _callerIdEventChannel = EventChannel(_callerIdChannelName);
 
   final List<DeviceModel> _devices = [];
-  Socket? _socket;
   int _port = 9100;
 
   Future<void> stopScan({bool stopBle = true, bool stopUsb = true}) async {
@@ -52,7 +53,10 @@ class DevicesService {
 
   // Get Devices from BT and USB
   Future<void> getDevices({
-    List<ConnectionType> connectionTypes = const [ConnectionType.BLE, ConnectionType.USB],
+    List<ConnectionType> connectionTypes = const [
+      ConnectionType.BLE,
+      ConnectionType.USB,
+    ],
     bool androidUsesFineLocation = false,
     int cloudPrinterNum = 1,
   }) async {
@@ -104,7 +108,9 @@ class DevicesService {
         }
       }
       // remove duplicates by address
-      _devices.removeWhere((device) => device.address == null || device.address == '');
+      _devices.removeWhere(
+        (device) => device.address == null || device.address == '',
+      );
       _sortDevices();
     }
   }
@@ -129,27 +135,27 @@ class DevicesService {
 
       await FlutterBluePlus.startScan(
         androidUsesFineLocation: androidUsesFineLocation,
-        timeout: const Duration(seconds: 20),
       );
 
       _bleSubscription = FlutterBluePlus.scanResults.listen((event) {
+        // too much duplicate devices
+        // remove duplicates by address
+        final uniqueDevices = event.toSet();
         final devices =
-            event
-                .map((e) {
-                  return DeviceModel(
-                    address: e.device.remoteId.str,
-                    name: e.device.platformName,
-                    connectionType: ConnectionType.BLE,
-                    isConnected: e.device.isConnected,
-                  );
-                })
-                .where((device) => device.name != null && device.name!.isNotEmpty)
-                .toList();
+            uniqueDevices.map((e) {
+              return DeviceModel(
+                address: e.device.remoteId.str,
+                name: e.device.platformName,
+                connectionType: ConnectionType.BLE,
+                isConnected: e.device.isConnected,
+              );
+            }).toList();
 
         for (var device in devices) {
           _updateOrAddPrinter(device);
         }
       });
+
       if (_bleSubscription != null) {
         // Clean up when scan stops
         FlutterBluePlus.cancelWhenScanComplete(_bleSubscription!);
@@ -182,7 +188,9 @@ class DevicesService {
       _devices.addAll(usbPrinters);
 
       // Start listening to USB events
-      _usbSubscription = _deviceEventChannel.receiveBroadcastStream().listen((event) {
+      _usbSubscription = _deviceEventChannel.receiveBroadcastStream().listen((
+        event,
+      ) {
         final map = Map<String, dynamic>.from(event);
         _updateOrAddPrinter(
           DeviceModel(
@@ -205,7 +213,10 @@ class DevicesService {
 
   Future<bool> connect(DeviceModel device) async {
     if (device.connectionType == ConnectionType.USB) {
-      return await FlutterCalleridPlatform.instance.connectToHidDevice(device.vendorId!, device.productId!);
+      return await FlutterCalleridPlatform.instance.connectToHidDevice(
+        device.vendorId!,
+        device.productId!,
+      );
     } else if (device.connectionType == ConnectionType.BLE) {
       try {
         bool isConnected = false;
@@ -228,7 +239,10 @@ class DevicesService {
 
   Future<bool> isConnected(DeviceModel device) async {
     if (device.connectionType == ConnectionType.USB) {
-      return await FlutterCalleridPlatform.instance.isConnected(device.vendorId!, device.productId!);
+      return await FlutterCalleridPlatform.instance.isConnected(
+        device.vendorId!,
+        device.productId!,
+      );
     } else {
       try {
         final bt = BluetoothDevice.fromId(device.address!);
@@ -252,13 +266,18 @@ class DevicesService {
 
   Future<bool> startListening(DeviceModel device) async {
     _callerIdSubscription?.cancel();
-    _callerIdSubscription = _callerIdEventChannel.receiveBroadcastStream().listen((event) {
-      final map = Map<String, dynamic>.from(event);
-      log("Received Caller ID: ${map['caller']} at ${map['datetime']}");
-      _callerIdStream.add(map);
-    });
+    _callerIdSubscription = _callerIdEventChannel
+        .receiveBroadcastStream()
+        .listen((event) {
+          final map = Map<String, dynamic>.from(event);
+          log("Received Caller ID: ${map['caller']} at ${map['datetime']}");
+          _callerIdStream.add(map);
+        });
 
-    return FlutterCalleridPlatform.instance.startListening(device.vendorId!, device.productId!);
+    return FlutterCalleridPlatform.instance.startListening(
+      device.vendorId!,
+      device.productId!,
+    );
   }
 
   Future<bool> stopListening() async {
@@ -294,7 +313,9 @@ class DevicesService {
   }
 
   void _updateOrAddPrinter(DeviceModel printer) {
-    final index = _devices.indexWhere((device) => device.address == printer.address);
+    final index = _devices.indexWhere(
+      (device) => device.address == printer.address,
+    );
     if (index == -1) {
       _devices.add(printer);
     } else {
@@ -304,7 +325,9 @@ class DevicesService {
   }
 
   void _sortDevices() {
-    _devices.removeWhere((element) => element.name == null || element.name == '');
+    _devices.removeWhere(
+      (element) => element.name == null || element.name == '',
+    );
     // remove items having same vendorId
     Set<String> seen = {};
     _devices.retainWhere((element) {
@@ -321,13 +344,18 @@ class DevicesService {
 
   Future<String?> _getLocalIP() async {
     final info = NetworkInfo();
-    final wifiIP = await info.getWifiIP(); // This gives your IP on the local network
+    final wifiIP =
+        await info.getWifiIP(); // This gives your IP on the local network
     return wifiIP;
   }
 
   Future<bool> _pingAndAddDevice(String ip) async {
     try {
-      final socket = await Socket.connect(ip, _port, timeout: const Duration(seconds: 5));
+      final socket = await Socket.connect(
+        ip,
+        _port,
+        timeout: const Duration(seconds: 5),
+      );
       socket.destroy();
       return true;
     } catch (error) {

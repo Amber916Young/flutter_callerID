@@ -52,7 +52,7 @@ class _MyHomePageState extends State<MyHomePage> {
   // Get Printer List
   void startScan() async {
     _devicesStreamSubscription?.cancel();
-    await _flutterCalleridPlugin.getDevices(connectionTypes: [ConnectionType.NETWORK], androidUsesFineLocation: true);
+    await _flutterCalleridPlugin.getDevices(connectionTypes: [ConnectionType.BLE], androidUsesFineLocation: true);
     _devicesStreamSubscription = _flutterCalleridPlugin.devicesStream.listen((List<DeviceModel> event) {
       log(event.map((e) => e.name).toList().toString());
       setState(() {
@@ -83,7 +83,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void connectToHidDevice(DeviceModel device) async {
     _connectedDevice = device;
-    await _flutterCalleridPlugin.connectToHidDevice(device);
+    bool connected = await _flutterCalleridPlugin.connectToHidDevice(device);
+    setState(() {
+      _connectedDevice?.isConnected = connected;
+    });
   }
 
   void disconnect(DeviceModel device) async {
@@ -110,6 +113,7 @@ class _MyHomePageState extends State<MyHomePage> {
               itemBuilder: (context, index) {
                 return ListTile(
                   title: Text(_devices[index].name ?? ''),
+                  subtitle: Text(_devices[index].isConnected ?? false ? 'Connected' : 'Disconnected'),
                   onTap: () => connectToHidDevice(_devices[index]),
                 );
               },
