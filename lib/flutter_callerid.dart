@@ -14,7 +14,7 @@ class FlutterCallerid {
 
   /// Get all available USB  devices
   Future<void> getDevices({
-    List<ConnectionType> connectionTypes = const [ConnectionType.USB, ConnectionType.BLE],
+    List<ConnectionType> connectionTypes = const [ConnectionType.USB],
     bool androidUsesFineLocation = false,
     int cloudPrinterNum = 1,
   }) async {
