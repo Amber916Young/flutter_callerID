@@ -61,14 +61,14 @@ class DevicesService {
     _devices.clear();
     _sentDeviceKeys.clear();
     if (connectionTypes.contains(ConnectionType.USB)) {
-      await stopScan(stopUsb: true);
+      await stopScan(stopUsb: true, stopBle: false);
       await _getUSBDevices();
     }
 
     if (connectionTypes.contains(ConnectionType.BLE)) {
       if (Platform.isAndroid) {
         await _bluetoothIsEnabled();
-        await stopScan(stopBle: true);
+        await stopScan(stopUsb: false, stopBle: true);
         await _getBleDevices(androidUsesFineLocation);
       }
     }
