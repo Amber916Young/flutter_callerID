@@ -356,9 +356,11 @@ class DevicesService {
         return true; // Keep
       }
     });
-    _devices.removeWhere(
-      (element) => _sentDeviceKeys.contains('${element.vendorId}_${element.address}_${element.isConnected}'),
-    );
+
+    // TODO next version only for USB
+    // _devices.removeWhere(
+    //   (element) => _sentDeviceKeys.contains('${element.vendorId}_${element.address}_${element.isConnected}'),
+    // );
     _devicesstream.add(_devices);
   }
 
