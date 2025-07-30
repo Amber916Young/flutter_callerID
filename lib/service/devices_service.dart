@@ -356,7 +356,9 @@ class DevicesService {
         return true; // Keep
       }
     });
-    _devices.removeWhere((element) => _sentDeviceKeys.contains('${element.vendorId}_${element.address}'));
+    _devices.removeWhere(
+      (element) => _sentDeviceKeys.contains('${element.vendorId}_${element.address}_${element.isConnected}'),
+    );
     _devicesstream.add(_devices);
   }
 
