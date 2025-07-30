@@ -52,10 +52,7 @@ class _MyHomePageState extends State<MyHomePage> {
   // Get Printer List
   void startScan() async {
     _devicesStreamSubscription?.cancel();
-    await _flutterCalleridPlugin.getDevices(
-      connectionTypes: [ConnectionType.USB, ConnectionType.BLE],
-      androidUsesFineLocation: false,
-    );
+    await _flutterCalleridPlugin.getDevices(connectionTypes: [ConnectionType.USB], androidUsesFineLocation: false);
     _devicesStreamSubscription = _flutterCalleridPlugin.devicesStream.listen((List<DeviceModel> event) {
       log(event.map((e) => e.name).toList().toString());
       setState(() {

@@ -61,11 +61,13 @@ class DevicesService {
     _devices.clear();
     _sentDeviceKeys.clear();
     if (connectionTypes.contains(ConnectionType.USB)) {
+      debugPrint("getUSBDevices");
       await stopScan(stopUsb: true, stopBle: false);
       await _getUSBDevices();
     }
 
     if (connectionTypes.contains(ConnectionType.BLE)) {
+      debugPrint("getBLEDevices");
       if (Platform.isAndroid) {
         await _bluetoothIsEnabled();
         await stopScan(stopUsb: false, stopBle: true);
@@ -73,6 +75,7 @@ class DevicesService {
       }
     }
     if (connectionTypes.contains(ConnectionType.NETWORK)) {
+      debugPrint("getWIFIDevices");
       await _getNetworkDevices(cloudPrinterNum);
     }
   }
@@ -188,6 +191,7 @@ class DevicesService {
       _devices.addAll(usbPrinters);
 
       // Start listening to USB events
+      // _usbSubscription?.cancel();
       _usbSubscription = _deviceEventChannel.receiveBroadcastStream().listen((event) {
         final map = Map<String, dynamic>.from(event);
         _updateOrAddPrinter(
