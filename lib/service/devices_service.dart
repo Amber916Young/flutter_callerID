@@ -15,9 +15,12 @@ class DevicesService {
 
   DevicesService._internal();
 
-  final StreamController<List<DeviceModel>> _devicesstream = StreamController<List<DeviceModel>>.broadcast();
-  final StreamController<Map<String, dynamic>> _callerIdStream = StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<ScanningEvent> _scanningStream = StreamController<ScanningEvent>.broadcast();
+  final StreamController<List<DeviceModel>> _devicesstream =
+      StreamController<List<DeviceModel>>.broadcast();
+  final StreamController<Map<String, dynamic>> _callerIdStream =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<ScanningEvent> _scanningStream =
+      StreamController<ScanningEvent>.broadcast();
 
   Stream<List<DeviceModel>> get devicesStream => _devicesstream.stream;
   Stream<Map<String, dynamic>> get callerIdStream => _callerIdStream.stream;
@@ -36,6 +39,12 @@ class DevicesService {
   final List<DeviceModel> _devices = [];
   int _port = 9100;
 
+  // Convenience getters for current state
+  bool get isBleScanning => _scanningState[ConnectionType.BLE] ?? false;
+  bool get isNetworkScanning => _scanningState[ConnectionType.NETWORK] ?? false;
+  bool get isUsbScanning => _scanningState[ConnectionType.USB] ?? false;
+  bool get isAnyScanning => _scanningState.values.any((scanning) => scanning);
+
   // Current scanning state
   final Map<ConnectionType, bool> _scanningState = {
     ConnectionType.BLE: false,
@@ -48,11 +57,17 @@ class DevicesService {
     // Only emit if state actually changed
     if (_scanningState[type] != isScanning) {
       _scanningState[type] = isScanning;
-      _scanningStream.add(ScanningEvent(connectionType: type, isScanning: isScanning));
+      _scanningStream.add(
+        ScanningEvent(connectionType: type, isScanning: isScanning),
+      );
     }
   }
 
-  Future<void> stopScan({bool stopBle = true, bool stopUsb = true, bool stopNetwork = true}) async {
+  Future<void> stopScan({
+    bool stopBle = true,
+    bool stopUsb = true,
+    bool stopNetwork = true,
+  }) async {
     try {
       if (stopBle) {
         await _bleSubscription?.cancel();
@@ -123,7 +138,9 @@ class DevicesService {
         if (!_scanningState[ConnectionType.NETWORK]!) break;
 
         int endIp = (startIp + batchSize - 1).clamp(1, 255);
-        allBatches.add(_processBatchOfIPs(subnet, startIp, endIp, cloudPrinterNum));
+        allBatches.add(
+          _processBatchOfIPs(subnet, startIp, endIp, cloudPrinterNum),
+        );
 
         // Limit concurrent batches to avoid overwhelming the system
         if (allBatches.length >= maxConcurrency ~/ batchSize) {
@@ -131,7 +148,10 @@ class DevicesService {
           allBatches.clear();
 
           // Check if we found enough devices
-          final foundDevices = _devices.where((d) => d.connectionType == ConnectionType.NETWORK).length;
+          final foundDevices =
+              _devices
+                  .where((d) => d.connectionType == ConnectionType.NETWORK)
+                  .length;
           if (foundDevices >= cloudPrinterNum) {
             break;
           }
@@ -145,12 +165,19 @@ class DevicesService {
       _updateScanningState(ConnectionType.NETWORK, false);
 
       // remove duplicates by address
-      _devices.removeWhere((device) => device.address == null || device.address == '');
+      _devices.removeWhere(
+        (device) => device.address == null || device.address == '',
+      );
       _sortDevices();
     }
   }
 
-  Future<void> _processBatchOfIPs(String subnet, int startIp, int endIp, int maxDevices) async {
+  Future<void> _processBatchOfIPs(
+    String subnet,
+    int startIp,
+    int endIp,
+    int maxDevices,
+  ) async {
     if (!_scanningState[ConnectionType.NETWORK]!) return;
 
     List<Future<DeviceModel?>> pingFutures = [];
@@ -171,7 +198,10 @@ class DevicesService {
           _devices.add(device);
 
           // Check if we've reached the limit
-          final networkDeviceCount = _devices.where((d) => d.connectionType == ConnectionType.NETWORK).length;
+          final networkDeviceCount =
+              _devices
+                  .where((d) => d.connectionType == ConnectionType.NETWORK)
+                  .length;
           if (networkDeviceCount >= maxDevices) {
             _updateScanningState(ConnectionType.NETWORK, false);
             break;
@@ -236,7 +266,9 @@ class DevicesService {
             if (uniqueDeviceAddresses.contains(e.device.remoteId.str)) {
               continue;
             }
-            debugPrint("Unique devices: ${e.device.platformName} ${e.device.isConnected}");
+            debugPrint(
+              "Unique devices: ${e.device.platformName} ${e.device.isConnected}",
+            );
             uniqueDeviceAddresses.add(e.device.remoteId.str);
             bleDevices.add(
               DeviceModel(
@@ -287,7 +319,9 @@ class DevicesService {
       _devices.addAll(usbPrinters);
 
       // Start listening to USB events
-      _usbSubscription = _deviceEventChannel.receiveBroadcastStream().listen((event) {
+      _usbSubscription = _deviceEventChannel.receiveBroadcastStream().listen((
+        event,
+      ) {
         final map = Map<String, dynamic>.from(event);
         _updateOrAddPrinter(
           DeviceModel(
@@ -311,7 +345,10 @@ class DevicesService {
 
   Future<bool> connect(DeviceModel device) async {
     if (device.connectionType == ConnectionType.USB) {
-      return await FlutterCalleridPlatform.instance.connectToHidDevice(device.vendorId!, device.productId!);
+      return await FlutterCalleridPlatform.instance.connectToHidDevice(
+        device.vendorId!,
+        device.productId!,
+      );
     } else if (device.connectionType == ConnectionType.BLE) {
       try {
         bool isConnected = false;
@@ -334,7 +371,10 @@ class DevicesService {
 
   Future<bool> isConnected(DeviceModel device) async {
     if (device.connectionType == ConnectionType.USB) {
-      return await FlutterCalleridPlatform.instance.isConnected(device.vendorId!, device.productId!);
+      return await FlutterCalleridPlatform.instance.isConnected(
+        device.vendorId!,
+        device.productId!,
+      );
     } else {
       try {
         final bt = BluetoothDevice.fromId(device.address!);
@@ -358,13 +398,18 @@ class DevicesService {
 
   Future<bool> startListening(DeviceModel device) async {
     _callerIdSubscription?.cancel();
-    _callerIdSubscription = _callerIdEventChannel.receiveBroadcastStream().listen((event) {
-      final map = Map<String, dynamic>.from(event);
-      log("Received Caller ID: ${map['caller']} at ${map['datetime']}");
-      _callerIdStream.add(map);
-    });
+    _callerIdSubscription = _callerIdEventChannel
+        .receiveBroadcastStream()
+        .listen((event) {
+          final map = Map<String, dynamic>.from(event);
+          log("Received Caller ID: ${map['caller']} at ${map['datetime']}");
+          _callerIdStream.add(map);
+        });
 
-    return FlutterCalleridPlatform.instance.startListening(device.vendorId!, device.productId!);
+    return FlutterCalleridPlatform.instance.startListening(
+      device.vendorId!,
+      device.productId!,
+    );
   }
 
   Future<bool> stopListening() async {
@@ -400,7 +445,9 @@ class DevicesService {
   }
 
   void _updateOrAddPrinter(DeviceModel printer) {
-    final index = _devices.indexWhere((device) => device.address == printer.address);
+    final index = _devices.indexWhere(
+      (device) => device.address == printer.address,
+    );
     if (index == -1) {
       _devices.add(printer);
     } else {
@@ -444,7 +491,9 @@ class DevicesService {
   // }
 
   void _sortDevices() {
-    _devices.removeWhere((element) => element.name == null || element.name == '');
+    _devices.removeWhere(
+      (element) => element.name == null || element.name == '',
+    );
     // remove items having same vendorId
     Set<String> seen = {};
     _devices.retainWhere((element) {
@@ -461,7 +510,8 @@ class DevicesService {
 
   Future<String?> _getLocalIP() async {
     final info = NetworkInfo();
-    final wifiIP = await info.getWifiIP(); // This gives your IP on the local network
+    final wifiIP =
+        await info.getWifiIP(); // This gives your IP on the local network
     return wifiIP;
   }
 
