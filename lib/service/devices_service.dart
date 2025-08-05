@@ -154,17 +154,13 @@ class DevicesService {
                   isConnected: e.device.isConnected,
                 ),
               );
-              // for (var device in bleDevices) {
-              //   _updateOrAddPrinter(device);
-              // }
+              for (var device in bleDevices) {
+                _updateOrAddPrinter(device);
+              }
             }
           }
         },
-        onDone: () {
-          for (var device in bleDevices) {
-            _updateOrAddPrinter(device);
-          }
-        },
+       
       );
 
       if (_bleSubscription != null) {
