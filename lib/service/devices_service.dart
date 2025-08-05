@@ -51,7 +51,7 @@ class DevicesService {
 
   // Get Devices from BT and USB
   Future<void> getDevices({
-    List<ConnectionType> connectionTypes = const [ConnectionType.BLE, ConnectionType.USB],
+    List<ConnectionType> connectionTypes = const [ConnectionType.USB],
     bool androidUsesFineLocation = false,
     int cloudPrinterNum = 1,
   }) async {
@@ -134,30 +134,38 @@ class DevicesService {
         timeout: const Duration(seconds: 10),
       );
       Set<String> uniqueDeviceAddresses = {};
-      _bleSubscription = FlutterBluePlus.scanResults.listen((event) {
-        List<DeviceModel> bleDevices = [];
-        final uniqueDevices = event.toSet();
-        for (var e in uniqueDevices) {
-          if (e.device.platformName.isNotEmpty) {
-            if (uniqueDeviceAddresses.contains(e.device.remoteId.str)) {
-              continue;
-            }
-            debugPrint("Unique devices: ${e.device.platformName}");
-            uniqueDeviceAddresses.add(e.device.remoteId.str);
-            bleDevices.add(
-              DeviceModel(
-                address: e.device.remoteId.str,
-                name: e.device.platformName,
-                connectionType: ConnectionType.BLE,
-                isConnected: e.device.isConnected,
-              ),
-            );
-            for (var device in bleDevices) {
-              _updateOrAddPrinter(device);
+      List<DeviceModel> bleDevices = [];
+
+      _bleSubscription = FlutterBluePlus.scanResults.listen(
+        (event) {
+          final uniqueDevices = event.toSet();
+          for (var e in uniqueDevices) {
+            if (e.device.platformName.isNotEmpty) {
+              if (uniqueDeviceAddresses.contains(e.device.remoteId.str)) {
+                continue;
+              }
+              debugPrint("Unique devices: ${e.device.platformName}");
+              uniqueDeviceAddresses.add(e.device.remoteId.str);
+              bleDevices.add(
+                DeviceModel(
+                  address: e.device.remoteId.str,
+                  name: e.device.platformName,
+                  connectionType: ConnectionType.BLE,
+                  isConnected: e.device.isConnected,
+                ),
+              );
+              // for (var device in bleDevices) {
+              //   _updateOrAddPrinter(device);
+              // }
             }
           }
-        }
-      });
+        },
+        onDone: () {
+          for (var device in bleDevices) {
+            _updateOrAddPrinter(device);
+          }
+        },
+      );
 
       if (_bleSubscription != null) {
         // Clean up when scan stops
@@ -191,7 +199,6 @@ class DevicesService {
       _devices.addAll(usbPrinters);
 
       // Start listening to USB events
-      // _usbSubscription?.cancel();
       _usbSubscription = _deviceEventChannel.receiveBroadcastStream().listen((event) {
         final map = Map<String, dynamic>.from(event);
         _updateOrAddPrinter(
