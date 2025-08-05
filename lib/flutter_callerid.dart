@@ -12,6 +12,10 @@ class FlutterCallerid {
     return DevicesService().callerIdStream;
   }
 
+  Stream<ScanningEvent> get scanningStream {
+    return DevicesService().scanningStream;
+  }
+
   /// Get all available USB  devices
   Future<void> getDevices({
     List<ConnectionType> connectionTypes = const [ConnectionType.USB],

@@ -47,13 +47,34 @@ class _MyHomePageState extends State<MyHomePage> {
 
   StreamSubscription<List<DeviceModel>>? _devicesStreamSubscription;
   StreamSubscription<Map<String, dynamic>>? _callerIdStreamSubscription;
+  StreamSubscription<ScanningEvent>? _scanningSubscription;
+  bool isScanning = false;
+
   List<DeviceModel> _devices = [];
   DeviceModel? _connectedDevice;
   // Get Printer List
   void startScan() async {
+    _scanningSubscription?.cancel();
+    _scanningSubscription = _flutterCalleridPlugin.scanningStream.listen((event) {
+      switch (event.connectionType) {
+        case ConnectionType.BLE:
+          bool isBleScanning = event.isScanning;
+          debugPrint("isBleScanning: $isBleScanning");
+          break;
+        case ConnectionType.NETWORK:
+          bool isNetworkScanning = event.isScanning;
+          debugPrint("isNetworkScanning: $isNetworkScanning");
+          break;
+        case ConnectionType.USB:
+          bool isUsbScanning = event.isScanning;
+          debugPrint("isUsbScanning: $isUsbScanning");
+          break;
+      }
+    });
+
     _devicesStreamSubscription?.cancel();
     await _flutterCalleridPlugin.getDevices(
-      connectionTypes: [ConnectionType.USB, ConnectionType.BLE],
+      connectionTypes: [ConnectionType.USB, ConnectionType.BLE, ConnectionType.NETWORK],
       androidUsesFineLocation: false,
     );
     _devicesStreamSubscription = _flutterCalleridPlugin.devicesStream.listen((List<DeviceModel> event) {

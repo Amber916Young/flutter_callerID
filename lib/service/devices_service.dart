@@ -17,9 +17,11 @@ class DevicesService {
 
   final StreamController<List<DeviceModel>> _devicesstream = StreamController<List<DeviceModel>>.broadcast();
   final StreamController<Map<String, dynamic>> _callerIdStream = StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<ScanningEvent> _scanningStream = StreamController<ScanningEvent>.broadcast();
 
   Stream<List<DeviceModel>> get devicesStream => _devicesstream.stream;
   Stream<Map<String, dynamic>> get callerIdStream => _callerIdStream.stream;
+  Stream<ScanningEvent> get scanningStream => _scanningStream.stream;
 
   StreamSubscription? _bleSubscription;
   StreamSubscription? _usbSubscription;
@@ -34,15 +36,36 @@ class DevicesService {
   final List<DeviceModel> _devices = [];
   int _port = 9100;
 
-  Future<void> stopScan({bool stopBle = true, bool stopUsb = true}) async {
+  // Current scanning state
+  final Map<ConnectionType, bool> _scanningState = {
+    ConnectionType.BLE: false,
+    ConnectionType.NETWORK: false,
+    ConnectionType.USB: false,
+  };
+
+  // Helper methods to update scanning state
+  void _updateScanningState(ConnectionType type, bool isScanning) {
+    // Only emit if state actually changed
+    if (_scanningState[type] != isScanning) {
+      _scanningState[type] = isScanning;
+      _scanningStream.add(ScanningEvent(connectionType: type, isScanning: isScanning));
+    }
+  }
+
+  Future<void> stopScan({bool stopBle = true, bool stopUsb = true, bool stopNetwork = true}) async {
     try {
       if (stopBle) {
         await _bleSubscription?.cancel();
         _bleSubscription = null;
         await FlutterBluePlus.stopScan();
+        _updateScanningState(ConnectionType.BLE, false);
       }
       if (stopUsb) {
         await _usbSubscription?.cancel();
+        _updateScanningState(ConnectionType.USB, false);
+      }
+      if (stopNetwork) {
+        _updateScanningState(ConnectionType.NETWORK, false);
       }
     } catch (e) {
       log('Failed to stop scanning for devices $e');
@@ -62,7 +85,8 @@ class DevicesService {
     _sentDeviceKeys.clear();
     if (connectionTypes.contains(ConnectionType.USB)) {
       debugPrint("getUSBDevices");
-      await stopScan(stopUsb: true, stopBle: false);
+      await stopScan(stopUsb: true, stopBle: false, stopNetwork: false);
+      _updateScanningState(ConnectionType.USB, true);
       await _getUSBDevices();
     }
 
@@ -70,12 +94,15 @@ class DevicesService {
       debugPrint("getBLEDevices");
       if (Platform.isAndroid) {
         await _bluetoothIsEnabled();
-        await stopScan(stopUsb: false, stopBle: true);
+        await stopScan(stopUsb: false, stopBle: true, stopNetwork: false);
+        _updateScanningState(ConnectionType.BLE, true);
         await _getBleDevices(androidUsesFineLocation);
       }
     }
     if (connectionTypes.contains(ConnectionType.NETWORK)) {
       debugPrint("getWIFIDevices");
+      await stopScan(stopUsb: false, stopBle: false, stopNetwork: true);
+      _updateScanningState(ConnectionType.NETWORK, true);
       await _getNetworkDevices(cloudPrinterNum);
     }
   }
@@ -85,29 +112,95 @@ class DevicesService {
     if (ip != null) {
       // subnet
       final subnet = ip.substring(0, ip.lastIndexOf('.'));
-      int count = 0;
-      for (int i = 1; i <= 255; i++) {
-        final deviceIp = '$subnet.$i';
-        // check if device is reachable by ping
-        if (await _pingAndAddDevice(deviceIp)) {
-          debugPrint('valid device found $deviceIp');
-          _devices.add(
-            DeviceModel(
-              address: deviceIp,
-              name: 'Cloud Printer $i',
-              connectionType: ConnectionType.NETWORK,
-              isConnected: false,
-            ),
-          );
-          count++;
-          if (count == cloudPrinterNum) {
+
+      // Process IPs in concurrent batches for faster scanning
+      const int batchSize = 25; // Process 25 IPs concurrently per batch
+      const int maxConcurrency = 50; // Maximum concurrent operations
+
+      List<Future<void>> allBatches = [];
+
+      for (int startIp = 1; startIp <= 255; startIp += batchSize) {
+        if (!_scanningState[ConnectionType.NETWORK]!) break;
+
+        int endIp = (startIp + batchSize - 1).clamp(1, 255);
+        allBatches.add(_processBatchOfIPs(subnet, startIp, endIp, cloudPrinterNum));
+
+        // Limit concurrent batches to avoid overwhelming the system
+        if (allBatches.length >= maxConcurrency ~/ batchSize) {
+          await Future.wait(allBatches);
+          allBatches.clear();
+
+          // Check if we found enough devices
+          final foundDevices = _devices.where((d) => d.connectionType == ConnectionType.NETWORK).length;
+          if (foundDevices >= cloudPrinterNum) {
             break;
           }
         }
       }
+
+      // Wait for remaining batches
+      if (allBatches.isNotEmpty) {
+        await Future.wait(allBatches);
+      }
+      _updateScanningState(ConnectionType.NETWORK, false);
+
       // remove duplicates by address
       _devices.removeWhere((device) => device.address == null || device.address == '');
       _sortDevices();
+    }
+  }
+
+  Future<void> _processBatchOfIPs(String subnet, int startIp, int endIp, int maxDevices) async {
+    if (!_scanningState[ConnectionType.NETWORK]!) return;
+
+    List<Future<DeviceModel?>> pingFutures = [];
+
+    for (int i = startIp; i <= endIp; i++) {
+      if (!_scanningState[ConnectionType.NETWORK]!) return;
+
+      final deviceIp = '$subnet.$i';
+      pingFutures.add(_pingAndCreateDevice(deviceIp, i));
+    }
+
+    try {
+      final results = await Future.wait(pingFutures);
+
+      for (final device in results) {
+        if (device != null && _scanningState[ConnectionType.NETWORK]!) {
+          debugPrint('Valid device found ${device.address}');
+          _devices.add(device);
+
+          // Check if we've reached the limit
+          final networkDeviceCount = _devices.where((d) => d.connectionType == ConnectionType.NETWORK).length;
+          if (networkDeviceCount >= maxDevices) {
+            _updateScanningState(ConnectionType.NETWORK, false);
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error in batch processing: $e');
+    }
+  }
+
+  Future<DeviceModel?> _pingAndCreateDevice(String ip, int deviceNumber) async {
+    try {
+      final socket = await Socket.connect(
+        ip,
+        _port,
+        timeout: const Duration(seconds: 2),
+      ); // Reduced timeout for faster scanning
+      socket.destroy();
+
+      return DeviceModel(
+        address: ip,
+        name: 'Cloud Printer $deviceNumber',
+        connectionType: ConnectionType.NETWORK,
+        isConnected: false,
+      );
+    } catch (error) {
+      debugPrint('Failed to ping $ip ${error.toString()}');
+      return null;
     }
   }
 
@@ -136,40 +229,39 @@ class DevicesService {
       Set<String> uniqueDeviceAddresses = {};
       List<DeviceModel> bleDevices = [];
 
-      _bleSubscription = FlutterBluePlus.scanResults.listen(
-        (event) {
-          final uniqueDevices = event.toSet();
-          for (var e in uniqueDevices) {
-            if (e.device.platformName.isNotEmpty) {
-              if (uniqueDeviceAddresses.contains(e.device.remoteId.str)) {
-                continue;
-              }
-              debugPrint("Unique devices: ${e.device.platformName}");
-              uniqueDeviceAddresses.add(e.device.remoteId.str);
-              bleDevices.add(
-                DeviceModel(
-                  address: e.device.remoteId.str,
-                  name: e.device.platformName,
-                  connectionType: ConnectionType.BLE,
-                  isConnected: e.device.isConnected,
-                ),
-              );
-              for (var device in bleDevices) {
-                _updateOrAddPrinter(device);
-              }
+      _bleSubscription = FlutterBluePlus.scanResults.listen((event) {
+        final uniqueDevices = event.toSet();
+        for (var e in uniqueDevices) {
+          if (e.device.platformName.isNotEmpty) {
+            if (uniqueDeviceAddresses.contains(e.device.remoteId.str)) {
+              continue;
+            }
+            debugPrint("Unique devices: ${e.device.platformName} ${e.device.isConnected}");
+            uniqueDeviceAddresses.add(e.device.remoteId.str);
+            bleDevices.add(
+              DeviceModel(
+                address: e.device.remoteId.str,
+                name: e.device.platformName,
+                connectionType: ConnectionType.BLE,
+                isConnected: e.device.isConnected,
+              ),
+            );
+            for (var device in bleDevices) {
+              _updateOrAddPrinter(device);
             }
           }
-        },
-       
-      );
+        }
+      });
 
       if (_bleSubscription != null) {
         // Clean up when scan stops
         FlutterBluePlus.cancelWhenScanComplete(_bleSubscription!);
         // Wait until scanning is complete
         await FlutterBluePlus.isScanning.where((val) => val == false).first;
+        _updateScanningState(ConnectionType.BLE, false);
       }
     } catch (e) {
+      _updateScanningState(ConnectionType.BLE, false);
       log("Failed to get BLE devices $e");
     }
   }
@@ -212,6 +304,7 @@ class DevicesService {
 
       _sortDevices();
     } catch (e) {
+      _updateScanningState(ConnectionType.USB, false);
       log("$e [USB Connection]");
     }
   }
@@ -363,11 +456,6 @@ class DevicesService {
         return true; // Keep
       }
     });
-
-    // TODO next version only for USB
-    // _devices.removeWhere(
-    //   (element) => _sentDeviceKeys.contains('${element.vendorId}_${element.address}_${element.isConnected}'),
-    // );
     _devicesstream.add(_devices);
   }
 
@@ -377,14 +465,12 @@ class DevicesService {
     return wifiIP;
   }
 
-  Future<bool> _pingAndAddDevice(String ip) async {
-    try {
-      final socket = await Socket.connect(ip, _port, timeout: const Duration(seconds: 5));
-      socket.destroy();
-      return true;
-    } catch (error) {
-      debugPrint('Failed to ping $ip ${error.toString()}');
-      return false;
-    }
+  void dispose() {
+    _devicesstream.close();
+    _callerIdStream.close();
+    _scanningStream.close();
+    _bleSubscription?.cancel();
+    _usbSubscription?.cancel();
+    _callerIdSubscription?.cancel();
   }
 }

@@ -1,5 +1,15 @@
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+class ScanningEvent {
+  final ConnectionType connectionType;
+  final bool isScanning;
+
+  ScanningEvent({required this.connectionType, required this.isScanning});
+
+  @override
+  String toString() => 'ScanningEvent($connectionType: $isScanning)';
+}
+
 class DeviceModel {
   String? address;
   String? name;
