@@ -215,22 +215,34 @@ class DevicesService {
 
   Future<DeviceModel?> _pingAndCreateDevice(String ip, int deviceNumber) async {
     try {
+      final isValid = await _pingConnection(ip);
+      if (isValid) {
+        return DeviceModel(
+          address: ip,
+          name: 'Cloud Printer $deviceNumber',
+          connectionType: ConnectionType.NETWORK,
+          isConnected: false,
+        );
+      }
+      return null;
+    } catch (error) {
+      debugPrint('Failed to ping $ip ${error.toString()}');
+      return null;
+    }
+  }
+
+  Future<bool> _pingConnection(String ip) async {
+    try {
       final socket = await Socket.connect(
         ip,
         _port,
         timeout: const Duration(seconds: 2),
-      ); // Reduced timeout for faster scanning
-      socket.destroy();
-
-      return DeviceModel(
-        address: ip,
-        name: 'Cloud Printer $deviceNumber',
-        connectionType: ConnectionType.NETWORK,
-        isConnected: false,
       );
+      socket.destroy();
+      return true;
     } catch (error) {
       debugPrint('Failed to ping $ip ${error.toString()}');
-      return null;
+      return false;
     }
   }
 
@@ -375,14 +387,17 @@ class DevicesService {
         device.vendorId!,
         device.productId!,
       );
-    } else {
+    } else if (device.connectionType == ConnectionType.BLE) {
       try {
         final bt = BluetoothDevice.fromId(device.address!);
         return bt.isConnected;
       } catch (e) {
         return false;
       }
+    } else if (device.connectionType == ConnectionType.NETWORK) {
+      return await _pingConnection(device.address!);
     }
+    return false;
   }
 
   Future<void> disconnect(DeviceModel device) async {
