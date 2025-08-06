@@ -377,7 +377,11 @@ class DevicesService {
       } catch (e) {
         return false;
       }
-    } else if (device.connectionType == ConnectionType.NETWORK) {}
+    } else if (device.connectionType == ConnectionType.NETWORK) {
+      // only check if device ip is valid
+      return await _pingConnection(device.address!);
+    }
+
     return false;
   }
 
