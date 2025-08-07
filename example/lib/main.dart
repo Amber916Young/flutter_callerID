@@ -117,12 +117,23 @@ class _MyHomePageState extends State<MyHomePage> {
     await _flutterCalleridPlugin.disconnect(device);
   }
 
+  Timer? _statusCheckTimer;
+
+  // void startPeriodicStatusCheck() {
+  //   _statusCheckTimer?.cancel();
+  //   _statusCheckTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+  //     _checkAllPrintersStatus();
+  //   });
+  // }
+
   void isConnected(DeviceModel device) async {
     bool connected = await _flutterCalleridPlugin.isConnected(device);
+    print('Connected: $connected');
     setState(() {
       _connectedDevice?.isConnected = connected;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,7 +157,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   return ListTile(
                     title: Text(_devices[index].name ?? ''),
                     subtitle: Text(_devices[index].isConnected ?? false ? 'Connected' : 'Disconnected'),
-                    onTap: () => connectToHidDevice(_devices[index]),
+                    onTap: () {
+                      connectToHidDevice(_devices[index]);
+                      isConnected(_devices[index]);
+                    },
                   );
                 },
               ),

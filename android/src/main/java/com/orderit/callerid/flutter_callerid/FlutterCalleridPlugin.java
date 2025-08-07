@@ -80,6 +80,7 @@ public class FlutterCalleridPlugin implements FlutterPlugin, MethodCallHandler {
                 String vendorId = call.argument("vendorId");
                 String productId = call.argument("productId");
                 result.success(flutterCallerIdMethod.isConnected(vendorId, productId));
+                break;
             }
             default:
                 result.notImplemented();
