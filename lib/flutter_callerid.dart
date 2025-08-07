@@ -48,6 +48,10 @@ class FlutterCallerid {
     await DevicesService().disconnect(device);
   }
 
+  Future<bool> isConnected(DeviceModel device) async {
+    return await DevicesService().isConnected(device);
+  }
+
   /// Start listening for caller ID data from the connected device
   Future<bool> startListening(DeviceModel device) async {
     return await DevicesService().startListening(device);

@@ -117,6 +117,12 @@ class _MyHomePageState extends State<MyHomePage> {
     await _flutterCalleridPlugin.disconnect(device);
   }
 
+  void isConnected(DeviceModel device) async {
+    bool connected = await _flutterCalleridPlugin.isConnected(device);
+    setState(() {
+      _connectedDevice?.isConnected = connected;
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
